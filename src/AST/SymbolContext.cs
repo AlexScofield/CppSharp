@@ -92,50 +92,16 @@ namespace CppSharp.AST
             }
         }
 
-        public bool FindSymbol(ref string symbol)
+        public bool FindLibraryOf(IMangledDecl mangledDecl, out NativeLibrary library)
         {
-            NativeLibrary lib;
-
-            if (FindLibraryBySymbol(symbol, out lib))
-                return true;
-
-            string alternativeSymbol;
-
-            // Check for C symbols with a leading underscore.
-            alternativeSymbol = "_" + symbol;
-            if (FindLibraryBySymbol(alternativeSymbol, out lib))
-            {
-                symbol = alternativeSymbol;
-                return true;
-            }
-
-            alternativeSymbol = symbol.TrimStart('_');
-            if (FindLibraryBySymbol(alternativeSymbol, out lib))
-            {
-                symbol = alternativeSymbol;
-                return true;
-            }
-
-            alternativeSymbol = "_imp_" + symbol;
-            if (FindLibraryBySymbol(alternativeSymbol, out lib))
-            {
-                symbol = alternativeSymbol;
-                return true;
-            }
-
-            alternativeSymbol = "__imp_" + symbol;
-            if (FindLibraryBySymbol("__imp_" + symbol, out lib))
-            {
-                symbol = alternativeSymbol;
-                return true;
-            }
-
-            return false;
-        }
-
-        public bool FindLibraryBySymbol(string symbol, out NativeLibrary library)
-        {
-            return Symbols.TryGetValue(symbol, out library);
+            return Symbols.TryGetValue(mangledDecl.Mangled, out library) ||
+                // The C compiler should normally add a leading underscore on all symbols with external linkage,
+                // i.e.symbols that may be shared between separate compilation units,
+                // so a variable DIPSWITCH in C would be mentioned as _DIPSWITCH when linking with other object files.
+                // This allows startup and runtime library files to use variables without a leading underscore,
+                // without creating a name - space collision with end - user application code.
+                (mangledDecl is Variable variable && variable.Linkage == Linkage.ExternalLinkage &&
+                    Symbols.TryGetValue('_' + variable.Mangled, out library));
         }
     }
 }

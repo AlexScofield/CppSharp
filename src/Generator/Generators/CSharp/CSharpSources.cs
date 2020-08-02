@@ -2108,9 +2108,8 @@ namespace CppSharp.Generators.CSharp
             if (dtor != null && dtor.Access != AccessSpecifier.Private &&
                 @class.HasNonTrivialDestructor && !@class.IsAbstract)
             {
-                NativeLibrary library;
                 if (!Options.CheckSymbols ||
-                    Context.Symbols.FindLibraryBySymbol(dtor.Mangled, out library))
+                    Context.Symbols.Symbols.TryGetValue(dtor.Mangled, out _))
                 {
                     WriteLine("if (disposing)");
                     if (@class.IsDependent || dtor.IsVirtual)
@@ -3232,10 +3231,7 @@ namespace CppSharp.Generators.CSharp
 
             string libName = declaration.TranslationUnit.Module.SharedLibraryName;
 
-            NativeLibrary library;
-            Context.Symbols.FindLibraryBySymbol(((IMangledDecl) declaration).Mangled, out library);
-
-            if (library != null)
+            if (Context.Symbols.FindLibraryOf((IMangledDecl) declaration, out NativeLibrary library))
                 libName = Path.GetFileNameWithoutExtension(library.FileName);
 
             if (Options.StripLibPrefix && libName != null && libName.Length > 3 &&
